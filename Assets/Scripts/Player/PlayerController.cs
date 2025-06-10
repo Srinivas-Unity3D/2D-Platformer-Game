@@ -1,28 +1,46 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Net.NetworkInformation;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] private Animator playerAnimator;
+    [SerializeField] private float speed = 10f;
+    [SerializeField] private Rigidbody2D playerRB;
+    [SerializeField] private float forceSpeed;
+
+    [SerializeField] private bool isGrounded = false;
 
     private void Start()
     {
         playerAnimator = GetComponent<Animator>();
+        playerRB = GetComponent<Rigidbody2D>();
     }
 
     void Update()
     {
-        float speed = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-        Move(speed);
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxisRaw("Vertical");
+
+
+        PlayerMovement(horizontal, vertical);
+        PlayerMovementAnimation(horizontal);
         Crouch(Input.GetKey(KeyCode.LeftControl));
-        Jump(vertical > 0);
+        JumpAnimation(vertical > 0);
     }
 
-    private void Move(float speed)
+    private void PlayerMovement(float horizontal, float vertical) 
     {
+        if (!isGrounded) return;
+       
+        Vector3 playerPos = transform.position;
+        playerPos.x += horizontal * speed * Time.deltaTime;
+        transform.position = playerPos;
+
+        playerRB.AddForce(new Vector2(0, vertical * forceSpeed), ForceMode2D.Impulse);
+    }
+
+    private void PlayerMovementAnimation(float speed)
+    {
+        if (!isGrounded) return;
         playerAnimator.SetFloat("Speed", Mathf.Abs(speed));
         Vector3 scale = transform.localScale;
         if (speed < 0f)
@@ -41,8 +59,29 @@ public class PlayerController : MonoBehaviour
         playerAnimator.SetBool("Crouch", isCrouch);
     }
 
-    private void Jump(bool isJump)
+    private void JumpAnimation(bool isJump)
     {
+        if (!isGrounded) return;
         playerAnimator.SetBool("Jump", isJump);
+    }
+
+    private void OnCollisionStay2D(Collision2D collision)
+    {
+        CheckGround(collision, true);
+    }
+
+    
+
+    private void OnCollisionExit2D(Collision2D collision)
+    {
+        CheckGround(collision, false);
+    }
+
+    private void CheckGround(Collision2D collision, bool grounded)
+    {
+        if (collision.transform.CompareTag("Ground"))
+        {
+            isGrounded = grounded;
+        }
     }
 }
